@@ -85,7 +85,7 @@ CallbackReturn DynamixelHardware::on_init(const hardware_interface::HardwareInfo
     info_.hardware_parameters.find("free_wheel") != info_.hardware_parameters.end() &&
     info_.hardware_parameters.at("free_wheel") == "true")
   {
-    free_wheel = true;
+    free_wheel_ = true;
     RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "free wheel mode");
     return CallbackReturn::SUCCESS;
   }
@@ -328,7 +328,7 @@ return_type DynamixelHardware::write(
 
   if(free_wheel_)
   {
-    return_type::OK;
+    return return_type::OK;
   }
 
   if (use_dummy_) {
