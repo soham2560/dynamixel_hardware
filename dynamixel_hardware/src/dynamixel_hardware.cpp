@@ -81,6 +81,15 @@ CallbackReturn DynamixelHardware::on_init(const hardware_interface::HardwareInfo
     return CallbackReturn::SUCCESS;
   }
 
+  if (
+    info_.hardware_parameters.find("free_wheel") != info_.hardware_parameters.end() &&
+    info_.hardware_parameters.at("free_wheel") == "true")
+  {
+    free_wheel = true;
+    RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "free wheel mode");
+    return CallbackReturn::SUCCESS;
+  }
+
   auto usb_port = info_.hardware_parameters.at("usb_port");
   auto baud_rate = std::stoi(info_.hardware_parameters.at("baud_rate"));
   const char * log = nullptr;
@@ -102,9 +111,15 @@ CallbackReturn DynamixelHardware::on_init(const hardware_interface::HardwareInfo
   }
 
   enable_torque(false);
-  set_control_mode(ControlMode::Position, true);
+  if(!free_wheel_)
+  {
+    set_control_mode(ControlMode::Position, true);
+  }
   set_joint_params();
+  if(!free_wheel_)
+  {
   enable_torque(true);
+  }
 
   const ControlItem * goal_position =
     dynamixel_workbench_.getItemInfo(joint_ids_[0], kGoalPositionItem);
@@ -309,6 +324,11 @@ return_type DynamixelHardware::write(
   if(!activated_)
   {
     return return_type::OK;
+  }
+
+  if(free_wheel_)
+  {
+    return_type::OK;
   }
 
   if (use_dummy_) {

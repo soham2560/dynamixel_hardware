@@ -105,6 +105,7 @@ private:
   bool mode_changed_{false};
   bool use_dummy_{false};
   bool activated_{false};
+  bool free_wheel_{false};
 };
 }  // namespace dynamixel_hardware
 
