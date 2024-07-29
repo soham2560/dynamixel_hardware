@@ -29,7 +29,7 @@ namespace dynamixel_hardware
 constexpr const char * kDynamixelHardware = "DynamixelHardware";
 constexpr uint8_t kGoalPositionIndex = 0;
 constexpr uint8_t kGoalVelocityIndex = 1;
-constexpr uint8_t kGoalCurrentIndex = 1;
+constexpr uint8_t kGoalCurrentIndex = 2;
 constexpr uint8_t kPresentPositionVelocityCurrentIndex = 0;
 constexpr const char * kGoalPositionItem = "Goal_Position";
 constexpr const char * kGoalVelocityItem = "Goal_Velocity";
