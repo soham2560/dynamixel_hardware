@@ -74,15 +74,6 @@ CallbackReturn DynamixelHardware::on_init(const hardware_interface::HardwareInfo
     RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "joint_id %d: %d", i, joint_ids_[i]);
   }
 
-  if (
-    info_.hardware_parameters.find("use_dummy") != info_.hardware_parameters.end() &&
-    info_.hardware_parameters.at("use_dummy") == "true")
-  {
-    use_dummy_ = true;
-    RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "dummy mode");
-    return CallbackReturn::SUCCESS;
-  }
-
   auto usb_port = info_.hardware_parameters.at("usb_port");
   auto baud_rate = std::stoi(info_.hardware_parameters.at("baud_rate"));
   const char * log = nullptr;
@@ -250,15 +241,6 @@ std::vector<hardware_interface::CommandInterface> DynamixelHardware::export_comm
 
 CallbackReturn DynamixelHardware::on_activate(const rclcpp_lifecycle::State & /* previous_state */)
 {
-  RCLCPP_DEBUG(rclcpp::get_logger(kDynamixelHardware), "start");
-  for (uint i = 0; i < joints_.size(); i++) {
-    if (use_dummy_ && std::isnan(joints_[i].state.position)) {
-      joints_[i].state.position = 0.0;
-      joints_[i].state.velocity = 0.0;
-      joints_[i].state.effort = 0.0;
-    }
-  }
-
   activated_ = true;
 
   return CallbackReturn::SUCCESS;
@@ -279,10 +261,6 @@ return_type DynamixelHardware::read(
 {
   if(!activated_)
   {
-    return return_type::OK;
-  }
-
-  if (use_dummy_) {
     return return_type::OK;
   }
 
@@ -338,14 +316,6 @@ return_type DynamixelHardware::write(
 {
   if(!activated_)
   {
-    return return_type::OK;
-  }
-
-  if (use_dummy_) {
-    for (auto & joint : joints_) {
-      joint.prev_command.position = joint.command.position;
-      joint.state.position = joint.command.position;
-    }
     return return_type::OK;
   }
   switch (control_mode_) {
