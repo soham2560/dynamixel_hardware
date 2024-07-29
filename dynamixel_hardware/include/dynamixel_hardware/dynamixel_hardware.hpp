@@ -52,11 +52,12 @@ enum class ControlMode
   Position,
   Velocity,
   Torque,
-  Currrent,
+  Current,
   ExtendedPosition,
   MultiTurn,
   CurrentBasedPosition,
   PWM,
+  None
 };
 
 class DynamixelHardware : public hardware_interface::SystemInterface
@@ -94,6 +95,7 @@ private:
 
   CallbackReturn set_joint_positions();
   CallbackReturn set_joint_velocities();
+  CallbackReturn set_joint_currents();
   CallbackReturn set_joint_params();
 
   DynamixelWorkbench dynamixel_workbench_;
