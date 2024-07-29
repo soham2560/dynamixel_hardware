@@ -108,9 +108,7 @@ CallbackReturn DynamixelHardware::on_init(const hardware_interface::HardwareInfo
   }
 
   enable_torque(false);
-  set_control_mode(control_mode_, true);
-  set_joint_params();
-  enable_torque(true);
+  set_control_mode(control_mode_);
 
   const ControlItem * goal_position =
     dynamixel_workbench_.getItemInfo(joint_ids_[0], kGoalPositionItem);
@@ -343,7 +341,7 @@ return_type DynamixelHardware::enable_torque(const bool enabled)
 {
   const char * log = nullptr;
 
-  if (enabled && !torque_enabled_) {
+  if (enabled) {
     for (uint i = 0; i < info_.joints.size(); ++i) {
       if (!dynamixel_workbench_.torqueOn(joint_ids_[i], &log)) {
         RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "%s", log);
@@ -352,7 +350,7 @@ return_type DynamixelHardware::enable_torque(const bool enabled)
     }
     reset_command();
     RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "Torque enabled");
-  } else if (!enabled && torque_enabled_) {
+  } else if (!enabled) {
     for (uint i = 0; i < info_.joints.size(); ++i) {
       if (!dynamixel_workbench_.torqueOff(joint_ids_[i], &log)) {
         RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "%s", log);
@@ -362,93 +360,61 @@ return_type DynamixelHardware::enable_torque(const bool enabled)
     RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "Torque disabled");
   }
 
-  torque_enabled_ = enabled;
   return return_type::OK;
 }
 
-return_type DynamixelHardware::set_control_mode(const ControlMode & mode, const bool force_set)
+return_type DynamixelHardware::set_control_mode(const ControlMode & mode)
 {
   const char * log = nullptr;
-  mode_changed_ = false;
 
-  if (mode == ControlMode::Velocity && (force_set || control_mode_ != ControlMode::Velocity)) {
-    bool torque_enabled = torque_enabled_;
-    if (torque_enabled) {
-      enable_torque(false);
-    }
-
+  if (mode == ControlMode::Velocity) {
     for (uint i = 0; i < joint_ids_.size(); ++i) {
       if (!dynamixel_workbench_.setVelocityControlMode(joint_ids_[i], &log)) {
         RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "%s", log);
         return return_type::ERROR;
       }
     }
+    control_mode_ = ControlMode::Velocity;
+    set_joint_params();
     RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "Velocity control");
-    if (control_mode_ != ControlMode::Velocity) {
-      mode_changed_ = true;
-      control_mode_ = ControlMode::Velocity;
-    }
-
-    if (torque_enabled) {
-      enable_torque(true);
-    }
+    
     return return_type::OK;
   }
 
-  if (mode == ControlMode::Position && (force_set || control_mode_ != ControlMode::Position)) {
-    bool torque_enabled = torque_enabled_;
-    if (torque_enabled) {
-      enable_torque(false);
-    }
-
+  if (mode == ControlMode::Position) {
     for (uint i = 0; i < joint_ids_.size(); ++i) {
       if (!dynamixel_workbench_.setPositionControlMode(joint_ids_[i], &log)) {
         RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "%s", log);
         return return_type::ERROR;
       }
     }
+    control_mode_ = ControlMode::Position;
+    set_joint_params();
     RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "Position control");
-    if (control_mode_ != ControlMode::Position) {
-      mode_changed_ = true;
-      control_mode_ = ControlMode::Position;
-    }
 
-    if (torque_enabled) {
-      enable_torque(true);
-    }
     return return_type::OK;
   }
 
-  if (mode == ControlMode::Current && (force_set || control_mode_ != ControlMode::Current)) {
-    bool torque_enabled = torque_enabled_;
-    if (torque_enabled) {
-      enable_torque(false);
-    }
-
+  if (mode == ControlMode::Current) {
     for (uint i = 0; i < joint_ids_.size(); ++i) {
       if (!dynamixel_workbench_.setTorqueControlMode(joint_ids_[i], &log)) {
         RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "%s", log);
         return return_type::ERROR;
       }
     }
-    RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "Current control");
-    if (control_mode_ != ControlMode::Current) {
-      mode_changed_ = true;
-      control_mode_ = ControlMode::Current;
-    }
+    control_mode_ = ControlMode::Current;
+    set_joint_params();
+    RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "Current Control");
 
-    if (torque_enabled) {
-      enable_torque(true);
-    }
     return return_type::OK;
   }
 
   if (mode == ControlMode::None) {
-    RCLCPP_WARN(rclcpp::get_logger(kDynamixelHardware), "No Control Mode selected");
+    RCLCPP_WARN(rclcpp::get_logger(kDynamixelHardware), "No control Mode");
     return return_type::OK;
 
   }
-  RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "Only position/velocity/current control are implemented");
+  RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "Only position/velocity control are implemented");
   return return_type::ERROR;
 }
 
@@ -474,9 +440,8 @@ CallbackReturn DynamixelHardware::set_joint_positions()
 
   std::copy(joint_ids_.begin(), joint_ids_.end(), ids.begin());
   for (uint i = 0; i < ids.size(); i++) {
-    joints_[i].prev_command.position = joints_[i].command.position;
-    commands[i] = dynamixel_workbench_.convertRadian2Value(
-      ids[i], static_cast<float>(joints_[i].command.position));
+    float command_position = (joints_[i].command.position  * joints_[i].gear_ratio) + joints_[i].offset;
+    commands[i] = dynamixel_workbench_.convertRadian2Value(ids[i], command_position);
   }
   if (!dynamixel_workbench_.syncWrite(
       kGoalPositionIndex, ids.data(), ids.size(), commands.data(), 1, &log))
@@ -494,9 +459,8 @@ CallbackReturn DynamixelHardware::set_joint_velocities()
 
   std::copy(joint_ids_.begin(), joint_ids_.end(), ids.begin());
   for (uint i = 0; i < ids.size(); i++) {
-    joints_[i].prev_command.velocity = joints_[i].command.velocity;
-    commands[i] = dynamixel_workbench_.convertVelocity2Value(
-      ids[i], static_cast<float>(joints_[i].command.velocity));
+    float command_velocity = joints_[i].command.velocity * joints_[i].gear_ratio;
+    commands[i] = dynamixel_workbench_.convertVelocity2Value(ids[i], command_velocity);
   }
   if (!dynamixel_workbench_.syncWrite(
       kGoalVelocityIndex, ids.data(), ids.size(), commands.data(), 1, &log))
@@ -514,18 +478,15 @@ CallbackReturn DynamixelHardware::set_joint_currents()
 
   std::copy(joint_ids_.begin(), joint_ids_.end(), ids.begin());
   for (uint i = 0; i < ids.size(); i++) {
-    joints_[i].prev_command.effort = joints_[i].command.effort;
     commands[i] = dynamixel_workbench_.convertCurrent2Value(
       ids[i], static_cast<float>(joints_[i].command.effort));
   }
   if (!dynamixel_workbench_.syncWrite(
-      kGoalCurrentIndex, ids.data(), ids.size(), commands.data(), 1, &log))
-  {
+        kGoalCurrentIndex, ids.data(), ids.size(), commands.data(), 1, &log)) {
     RCLCPP_ERROR(rclcpp::get_logger(kDynamixelHardware), "%s", log);
   }
   return CallbackReturn::SUCCESS;
 }
-
 CallbackReturn DynamixelHardware::set_joint_params()
 {
   const char * log = nullptr;
