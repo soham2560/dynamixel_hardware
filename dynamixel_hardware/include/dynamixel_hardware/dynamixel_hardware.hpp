@@ -89,7 +89,7 @@ public:
 private:
   return_type enable_torque(const bool enabled);
 
-  return_type set_control_mode(const ControlMode & mode, const bool force_set = false);
+  return_type set_control_mode(const ControlMode & mode);
 
   return_type reset_command();
 
