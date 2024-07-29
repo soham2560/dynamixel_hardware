@@ -87,6 +87,20 @@ CallbackReturn DynamixelHardware::on_init(const hardware_interface::HardwareInfo
   auto baud_rate = std::stoi(info_.hardware_parameters.at("baud_rate"));
   const char * log = nullptr;
 
+  auto it = info_.hardware_parameters.find("control_mode");
+  if (it == info_.hardware_parameters.end())
+  {
+    RCLCPP_FATAL(
+      rclcpp::get_logger(
+        kDynamixelHardware),
+      "Parameter 'control_mode' not set. Valid values are effort, velocity, position.");
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+  else
+  {
+    control_mode_ = control_modes.at(it->second);
+  }
+
   RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "usb_port: %s", usb_port.c_str());
   RCLCPP_INFO(rclcpp::get_logger(kDynamixelHardware), "baud_rate: %d", baud_rate);
 
@@ -104,7 +118,6 @@ CallbackReturn DynamixelHardware::on_init(const hardware_interface::HardwareInfo
   }
 
   enable_torque(false);
-  // TODO(Soham): Get control mode with unordered map
   set_control_mode(control_mode_, true);
   set_joint_params();
   enable_torque(true);
@@ -464,7 +477,7 @@ return_type DynamixelHardware::set_control_mode(const ControlMode & mode, const 
     return return_type::OK;
 
   }
-  RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "Only position/velocity control are implemented");
+  RCLCPP_FATAL(rclcpp::get_logger(kDynamixelHardware), "Only position/velocity/current control are implemented");
   return return_type::ERROR;
 }
 

@@ -93,6 +93,11 @@ private:
 
   return_type reset_command();
 
+  std::unordered_map<std::string, ControlMode> control_modes = {
+  {"position",ControlMode::Position},
+  {"velocity",ControlMode::Velocity},
+  {"current",ControlMode::Current}};
+
   CallbackReturn set_joint_positions();
   CallbackReturn set_joint_velocities();
   CallbackReturn set_joint_currents();
