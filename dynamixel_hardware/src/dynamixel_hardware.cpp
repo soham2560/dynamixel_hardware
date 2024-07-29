@@ -440,8 +440,7 @@ CallbackReturn DynamixelHardware::set_joint_positions()
 
   std::copy(joint_ids_.begin(), joint_ids_.end(), ids.begin());
   for (uint i = 0; i < ids.size(); i++) {
-    float command_position = (joints_[i].command.position  * joints_[i].gear_ratio) + joints_[i].offset;
-    commands[i] = dynamixel_workbench_.convertRadian2Value(ids[i], command_position);
+    commands[i] = dynamixel_workbench_.convertRadian2Value(ids[i], joints_[i].command.position);
   }
   if (!dynamixel_workbench_.syncWrite(
       kGoalPositionIndex, ids.data(), ids.size(), commands.data(), 1, &log))
@@ -459,8 +458,7 @@ CallbackReturn DynamixelHardware::set_joint_velocities()
 
   std::copy(joint_ids_.begin(), joint_ids_.end(), ids.begin());
   for (uint i = 0; i < ids.size(); i++) {
-    float command_velocity = joints_[i].command.velocity * joints_[i].gear_ratio;
-    commands[i] = dynamixel_workbench_.convertVelocity2Value(ids[i], command_velocity);
+    commands[i] = dynamixel_workbench_.convertVelocity2Value(ids[i], joints_[i].command.velocity);
   }
   if (!dynamixel_workbench_.syncWrite(
       kGoalVelocityIndex, ids.data(), ids.size(), commands.data(), 1, &log))
